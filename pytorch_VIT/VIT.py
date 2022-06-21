@@ -289,6 +289,52 @@ class ViTCfg:
     timm_pool: str= 'avg' # feature pooling for timm model ('abs attn', 'rot_attn', 'avg', '')
     tim_proj: str= 'linear' # linear pojection for timm model output ('linear', 'mlp', '')
 
+class VIT_Pretrained(nn.Module): 
+    def __init__(
+        self, embed_dim: int,
+        vision_cfg: ViTCfg, 
+        quick_gelu: bool = False, 
+        )
+        super().__init__() 
+        if isinstance(vision_cfg, dict): 
+            vision_cfg= ViTcfg(**vision_cfg)
+
+        ## QuickGELU vs native nn.GELU --> is both faster and more memory efficient 
+        ## timm model is alway using GELU 
+        act_layer=QuickGELU if quick_gelu else nn.GELU 
+
+        ## ViT configure through Timm 
+        if vision_cfg.timm_model_name: 
+            self.visual= TimmModel(
+            vision_cfg.timm_model_name, 
+            pretrained= vision_cfg.timm_model_pretrained, 
+            pool= vision_cfg.timm_pool, 
+            proj= vision_cfg.timm_proj, 
+            embed_dim= embed_dim, 
+            image_size= vision_cfg.image_size, 
+            )
+
+        vision_heads= vision_cfg.width  // vision_cfg.head_width
+        
+        self.visual= VisionTransformer(
+            image_size= vision_cfg.image_size, 
+            patch_size= vision_cfg.patch_size, 
+            width= vision_cfg.width, 
+            layers= vision_cfg.layers. 
+            heads= vision_heads, 
+            mlp_ratio= vision_cfg.mlp_ratio, 
+            output_dim= embed_dim, 
+            act_layer= act_layer, 
+        )
+
+
+        def init_parameters(self): 
+            if hasattr(self.visual, "init_parameters"): 
+                self.visual.init_parameters() 
+           
+
+
+
 
 def build_model_from_state_dict(state_dict: dict): 
     vit="visual.proj" in state_dict 
@@ -318,6 +364,5 @@ def build_model_from_state_dict(state_dict: dict):
     transformer_width= state_dict["ln_final.weight"].shape[0]
     transformer_head= transformer_width //64 
     transformer_layers= len(set(k.split(".")[2] for k in state_dict if k.startswith(f"transformer.resblocks")))
-
-
+    
     vision_conf= ViTCfg
