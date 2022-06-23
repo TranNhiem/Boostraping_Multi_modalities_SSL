@@ -6,8 +6,14 @@ import hashlib
 import os 
 import urllib 
 import warnings 
-
+import torch 
+from typing import Union, List 
 from tqdm import tqdm 
+from VIT import build_model_from_state_dict
+
+__all__=["list_openai_models", "load_openai_model"]
+
+
 
 _VITB32 = dict(
     openai="https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt",
@@ -159,3 +165,80 @@ def download_pretrained(url: str, root: str= os.path.expanduser("~/.cache/clip")
             raise RuntimeError(f"Model has been downloaded but the SHA256 checksum does not not match")
 
     return download_target
+
+#************************************************************
+## Loading OpenAI model with state_dict Pytorch 
+#************************************************************
+
+def list_openai_models() -> List[str]: 
+    """
+    Returns the names of available CLIP models
+    """
+    return list_pretrained_tag_models("openai")
+
+def load_openai_model(name: str, 
+    device: Union[str, torch.device] ="cuda" if torch.cuda.is_available() else "cpu", 
+    jit=True, ):
+    
+    """
+    Loading CLIP model but only take the Vision encoder 
+    name: str 
+        A model name listed by "clip.available_models()", or the path to a model checkpoint containing the state_dict device
+    device  : Union[str, torch.device]
+        The device to put the loaded model 
+    jit: bool 
+        Whether to load the optimized JIT model (default) or more hackable non-JIT model.
+    
+    Returns 
+    --------
+    model: torch.nn.Module 
+    preprocess: Callable[[PIL.Image], torch.Tensor]
+        A torchvision transform that converts a PIL image into a tensor that returned model can take as its input 
+    """ 
+
+    if get_pretrained_url(name, 'openai'): 
+        model_path= download_pretrained(get_pretrained_url(name, 'openai'))
+    elif os.path.isfile(name):
+        model_path= name 
+    else: 
+        raise RuntimeError(f"Model {name} not found; available models={list_openai_models()}")
+    
+    try: 
+        #loading JIT archive 
+        model = torch.jit.load(model_path, map_location=device if jit else "cpu").eval() 
+        state_dict= None 
+
+    except RuntimeError: 
+        # loading saved sate dict 
+        if jit: 
+            warnings.warn(f"File {model_path} is not a JIT archive. Loading as a state dict instead")
+            jit= False 
+        state_dict= torch.load(model_path, map_location="cpu")
+
+    if not jit: 
+        try: 
+            model = build_model_from_openai_state_dict(state_dict or model.state_dict()).to(device)
+        except keyError: 
+            sd= {k[7:]: v for k, v in state_dict["state_dict"].items()}
+            model= build_model_from_openai_state_dict(sd).to(device)
+        
+        if str(device)=="cpu": 
+            model.float() 
+        return model 
+
+    # Patch the device names 
+    device_holder= torch.jit.trace(lambda: torch.ones([]).to(torch.device(device)), example_inputs=[])
+    device_node = [n for n in device_holder.graph.findAllNodes("prim::Constant") if "Device" in repr(n)][-1]
+
+    def patch_device(module): 
+        try: 
+            graphs=[module.graph] if hasattr(module, "graph") else [] 
+        except RuntimeError: 
+            graphs =[] 
+
+        if hasattr(module, "forward1"): 
+            graphs.append(module.forward1.graph)
+        for graph in graphs: 
+            for node in graph.findAllNodes("prim::Constant"): 
+                if "value" in node.attributeNames() and str(node["value"]).startswith("cuda"): 
+                    node.copyAttributes(device+node )        
