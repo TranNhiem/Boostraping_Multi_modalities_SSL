@@ -241,4 +241,38 @@ def load_openai_model(name: str,
         for graph in graphs: 
             for node in graph.findAllNodes("prim::Constant"): 
                 if "value" in node.attributeNames() and str(node["value"]).startswith("cuda"): 
-                    node.copyAttributes(device+node )        
+                    node.copyAttributes(device_node )  
+
+    model.apply(patch_device)
+    patch_device(model.encode_image)    
+    # Consider using text encoder or not 
+    #patch_device(model.encode_text)
+
+    # patch dtype to float32 on CPU 
+    if str(device) =="cpu": 
+        float_holder= torch.jit.trace(lambda: torch.ones([]).float(), example_inputs=[])
+        float_input= list(float_holder.graph.findNode("aten::to").inputs())[1]
+        float_node= float_input.node() 
+
+       try:
+            graphs = [module.graph] if hasattr(module, "graph") else []
+        except RuntimeError:
+            graphs = []
+
+        if hasattr(module, "forward1"):
+            graphs.append(module.forward1.graph)
+
+        for graph in graphs:
+            for node in graph.findAllNodes("aten::to"):
+                inputs = list(node.inputs())
+                for i in [1, 2]:  # dtype can be the second or third argument to aten::to()
+                    if inputs[i].node()["value"] == 5:
+                        inputs[i].node().copyAttributes(float_node)
+
+        model.apply(patch_float)
+        patch_float(model.encode_image)
+        #patch_float(model.encode_text)
+        model.float() 
+    # Ensure image_size attr available at consistent location for both jut and non-jit 
+    model.visual.image_size= model.input_resolution.item() 
+    return model 
