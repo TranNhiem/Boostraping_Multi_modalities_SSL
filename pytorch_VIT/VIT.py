@@ -294,10 +294,10 @@ class VIT_Pretrained(nn.Module):
         self, embed_dim: int,
         vision_cfg: ViTCfg, 
         quick_gelu: bool = False, 
-        )
+        ): 
         super().__init__() 
         if isinstance(vision_cfg, dict): 
-            vision_cfg= ViTcfg(**vision_cfg)
+            vision_cfg= ViTCfg(**vision_cfg)
 
         ## QuickGELU vs native nn.GELU --> is both faster and more memory efficient 
         ## timm model is alway using GELU 
@@ -320,20 +320,35 @@ class VIT_Pretrained(nn.Module):
             image_size= vision_cfg.image_size, 
             patch_size= vision_cfg.patch_size, 
             width= vision_cfg.width, 
-            layers= vision_cfg.layers. 
+            layers= vision_cfg.layers, 
             heads= vision_heads, 
             mlp_ratio= vision_cfg.mlp_ratio, 
             output_dim= embed_dim, 
             act_layer= act_layer, 
         )
 
+        self.init_parameters() 
 
         def init_parameters(self): 
             if hasattr(self.visual, "init_parameters"): 
                 self.visual.init_parameters() 
-           
 
+        def lock_image_tower(self, unlocked_groups=10, freeze_bn_stats=False): 
+            # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
+            self.visual.lock(unlocked_groups= unlocked_groups, freeze_bn_stats= freeze_bn_stats)
 
+        @torch.jit.ignore
+        def set_grad_checkpointing(self, enable=True): 
+            self.visual.set_grad_checkpointing(enable)
+            self.transformer.grad_checkpointing= enable 
+        
+        def encode_image(self, image):
+            return self.visual(image)
+
+        def forward(self, image): 
+            image_features=self.encode_image(image)
+            image_features= F.normalize(image_features, dim=-1)
+            return image_features
 
 
 def build_model_from_state_dict(state_dict: dict): 
@@ -365,4 +380,37 @@ def build_model_from_state_dict(state_dict: dict):
     transformer_head= transformer_width //64 
     transformer_layers= len(set(k.split(".")[2] for k in state_dict if k.startswith(f"transformer.resblocks")))
     
-    vision_conf= ViTCfg
+    vision_conf= ViTCfg(layers= vision_layers, 
+                width= vision_width, 
+                patch_size= vision_patch_size, 
+                image_size= image_size, 
+                )
+    ## Attention for OpenAI pretrained model weight using quick_gelu else: set it to False 
+    model=model.lock_image_tower(unlocked_groups=10, freeze_bn_stats= False)
+    model = VIT_Pretrained(embed_dim,vision_cfg=vision_conf, quick_gelu=True)
+
+    #state diction remove some layers input
+    state_dict.pop("input_resolution", None )
+
+    convert_weights_to_fp16(model)
+    model.load_state_dict(state_dict)
+    return model.eval() 
+
+
+## Function to testing the model implementation correct or not 
+def trace_model(model, batch_size=256, device=torch.device('cpu')): 
+    model.eval() 
+    image_size= model.visual.image_size 
+    example_images= torch.ones((batch_size,3, image_size, image_size), device= device)
+    model= torch.jet.trace_module(
+        model, 
+        inputs=dict(
+            forward=(example_images),
+             
+            encode_image=(example_images)
+        ))
+    model.visual.image_size=image_size
+    return model 
+
+    
+
