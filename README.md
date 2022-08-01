@@ -1,3 +1,3 @@
-# Collection_Vision_Transformer_Models_and_Pretrained_Weights
- This repository collectes multiple state-of-the-art vision transformer model for accelerating vision extractor in multi-modalities model training.
-
+# Unified SSL Modality Vision - Language - Audio
+This self-supervised learning project aim to connect the representation between different modalities
+Copyright (c) 2022 SSL Team
