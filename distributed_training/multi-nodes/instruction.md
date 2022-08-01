@@ -1,0 +1,1 @@
+Slurm  configurs & run command 
