@@ -42,9 +42,9 @@ _VITL14 = dict(
 _VITL14_336 = dict(
     openai="https://openaipublic.azureedge.net/clip/models/3035c92b350959924f9f00213499208652fc7ea050643e8b385c2dac08641f02/ViT-L-14-336px.pt"
 )
-#************************************************************
+#**********************************************************************************
 ## List of Convolution ResNet (Attention Pooling + EfficientNet-style Scaling)
-#************************************************************
+#**********************************************************************************
 
 _RN50 = dict(
     openai="https://openaipublic.azureedge.net/clip/models/afeb0e10f9e5a86da6080e35cf09123aca3b358a0c3e3b6c78a7b63bc04b6762/RN50.pt",
