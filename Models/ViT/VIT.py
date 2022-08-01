@@ -10,6 +10,7 @@ from torch.utils.checkpoint import checkpoint
 
 from .timm_model import TimmModel 
 from .utils import freeze_batch_norm_2d
+
 ## **************************
 # some helpers function
 ## **************************
