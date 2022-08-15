@@ -3,9 +3,6 @@ import pytest
 import torch
 
 from Models.Perceiver_archs.perceiver_module import (
-    CrossAttentionLayer, SelfAttentionBlock
-)
-from Models.Perceiver_archs.perceiver_module import (
     PerceiverEncoder, PerceiverDecoder, PerceiverIO
 )
 from Models.Perceiver_archs.task_spec_adapter import (

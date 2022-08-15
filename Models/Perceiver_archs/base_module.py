@@ -82,6 +82,9 @@ class CrossAttentionLayer(Sequential):
         )
 
 
+#####################################################
+# low-level sub-modules
+
 class MultiHeadAttention(nn.Module):
     def __init__(
         self,
@@ -147,9 +150,9 @@ class MultiHeadAttention(nn.Module):
         if attn_mask is not None:
             raise NotImplementedError("attention masks not supported yet")
 
-        q = self.q_proj(x_q)
-        k = self.k_proj(x_kv)
-        v = self.v_proj(x_kv)
+        q = self.q_proj(x_q)   # 512 x 1024
+        k = self.k_proj(x_kv)  # b x 1024,    q*k = b x 512 (latent arr)
+        v = self.v_proj(x_kv)  # b x 1024 
 
         q, k, v = (rearrange(x, "b n (h c) -> (b h) n c", h=self.num_heads) for x in [q, k, v])
         attn = torch.einsum("b i c, b j c -> b i j", q, k) * self.dp_scale
@@ -161,11 +164,11 @@ class MultiHeadAttention(nn.Module):
 
         attn = attn.softmax(dim=-1)
         attn = self.dropout(attn)
-
+        # s x 512 , s x 1024 -> b 512 1024
         o = torch.einsum("b i j, b j c -> b i c", attn, v)
         o = rearrange(o, "(b h) n c -> b n (h c)", h=self.num_heads)
 
-        return self.o_proj(o)
+        return self.o_proj(o)    # map 1024 to output_chnl (1024 here)
 
 
 class SelfAttention(nn.Module):

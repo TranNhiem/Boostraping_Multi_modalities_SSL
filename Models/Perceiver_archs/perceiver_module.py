@@ -238,3 +238,10 @@ class PerceiverIO(Sequential):
     @property
     def decoder(self):
         return self[1]
+
+
+
+
+
+
+

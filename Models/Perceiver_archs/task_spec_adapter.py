@@ -10,8 +10,25 @@ from Models.Perceiver_archs.adapter_prototype import (
     InputAdapter, OutputAdapter
 )
 
+class Image_LearnableEnc(InputAdapter):
+    def __init__(self, image_shape: Tuple[int, ...]):
+        *self.spatial_shape, num_image_channels = image_shape
+        self.image_shape = image_shape
 
-class ImageInputAdapter(InputAdapter):
+        super().__init__(num_input_channels=num_image_channels + self._num_position_encoding_channels())
+        # create encodings for single example
+        self.pos_encoding = nn.Linear((max_seq_len, num_input_channels))
+
+    def forward(self, x):
+        b, *d = x.shape
+        if tuple(d) != self.image_shape:
+            raise ValueError(f"Input image shape {tuple(d)} different from required shape {self.image_shape}")
+
+        x_enc = self.pos_encoding(x)
+        return torch.cat([x, x_enc], dim=-1)
+
+
+class Image_FourierEnc(InputAdapter):
     def __init__(self, image_shape: Tuple[int, ...], num_frequency_bands: int):
         *self.spatial_shape, num_image_channels = image_shape
         self.image_shape = image_shape
@@ -149,3 +166,5 @@ class TiedTextOutputAdapter(OutputAdapter):
     def forward(self, x):
         return self.proj(x)
 
+if __name__ == "__main__":
+    breakpoint()
