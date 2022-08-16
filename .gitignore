@@ -1,5 +1,7 @@
 ### AL ###
 #Template for AL projects for Dynamics 365 Business Central
+.Trash-0/
+.ipynb_checkpoints/
 .pytest_cache/
 # ignore egginfo folder
 *.egg-info/

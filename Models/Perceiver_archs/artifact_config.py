@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Generic, Optional, TypeVar
-
+from Models.Perceiver_archs.io_adapter import InputAdapter, OutputAdapter
 
 @dataclass
 class EncoderConfig:
@@ -43,6 +43,3 @@ class PerceiverConfig(Generic[EnCfg, DeCfg]):
     num_latent_channels: int = 1024
     activation_checkpointing: bool = False
     activation_offloading: bool = False
-
-
-

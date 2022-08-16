@@ -1,31 +1,76 @@
-from typing import Optional, Tuple
-
 import torch
 from torch import Tensor
 import torch.nn as nn
-from einops import rearrange, repeat  
-import math
+from einops import repeat  
 
-from Models.Perceiver_archs.adapter_prototype import (
-    InputAdapter, OutputAdapter
-)
+__all__ = ["Image_LearnableEnc", "Image_FourierEnc", "ClassificationOutputAdapter"]
 
+## Adapter Prototype :
+class InputAdapter(nn.Module):
+    def __init__(self, num_input_channels: int):
+        """Transforms and position-encodes task-specific input to generic encoder input.
+        :param num_input_channels: Number of channels of the generic encoder input produced by this adapter.
+        """
+        super().__init__()
+        self._num_input_channels = num_input_channels
+
+    @property
+    def num_input_channels(self):
+        return self._num_input_channels
+
+    def forward(self, x):
+        raise NotImplementedError()
+
+
+class OutputAdapter(nn.Module):
+    def __init__(self, output_query: Tensor, init_scale: float):
+        """Transforms generic decoder cross-attention output to task-specific output.
+        :param output_query: Output query prototype (does not include batch dimension) used as query input to
+            generic decoder cross-attention.
+        :param init_scale: Output query parameter initialization scale.
+        """
+        super().__init__()
+        self._output_query = nn.Parameter(output_query)
+        self._init_parameters(init_scale)
+
+    def _init_parameters(self, init_scale: float):
+        with torch.no_grad():
+            self._output_query.normal_(0.0, init_scale)
+
+    @property
+    def num_output_query_channels(self):
+        return self._output_query.shape[-1]
+
+    def output_query(self, x):
+        return repeat(self._output_query, "... -> b ...", b=x.shape[0])
+
+    def forward(self, x):
+        raise NotImplementedError()
+
+
+## Modality Specific Adapter :
 class Image_LearnableEnc(InputAdapter):
     def __init__(self, image_shape: Tuple[int, ...]):
-        *self.spatial_shape, num_image_channels = image_shape
-        self.image_shape = image_shape
+        # Xavier like init
+        def init_pos_enc(num_image_channels):
+            init_scale = math.sqrt(num_image_channels)
+            with torch.no_grad():
+                self.pos_encoding.normal_(0.0, init_scale)
 
-        super().__init__(num_input_channels=num_image_channels + self._num_position_encoding_channels())
-        # create encodings for single example
-        self.pos_encoding = nn.Linear((max_seq_len, num_input_channels))
+        self.image_shape = image_shape
+        *self.spatial_shape, num_image_channels = image_shape
+        super().__init__(num_input_channels=num_image_channels)
+
+        self.pos_encoding = nn.Parameters(torch.empty(image_shape))
+        init_pos_enc(num_image_channels)
 
     def forward(self, x):
         b, *d = x.shape
         if tuple(d) != self.image_shape:
             raise ValueError(f"Input image shape {tuple(d)} different from required shape {self.image_shape}")
 
-        x_enc = self.pos_encoding(x)
-        return torch.cat([x, x_enc], dim=-1)
+        x_enc = rearrange(self.pos_encoding, "b i j c -> b (i j) c")
+        return x + x_enc
 
 
 class Image_FourierEnc(InputAdapter):
