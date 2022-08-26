@@ -18,6 +18,7 @@
 
 ### TODO list :
 - [x] Visual-aid architecture design.
+- [ ] Build the multi-modal perceiver architecture.
 - [ ] Folder arrangement (only reveal perceiver_artifact.py interface)
 
 ---
@@ -38,4 +39,4 @@ repeate(a, 'c r p q', q=4).shape  # [3, 8, 9, 4]
 
 #### The test folder is placed with the root dir, which contains the test functions which allow us not only confirm the correctness of each module but also **reveal the usage** of each module.
 
-**HHRI SSL-group member : Josef-Huang 2022/08/15**
+**HHRI SSL-group member : Josef-Huang 2022/08/24**

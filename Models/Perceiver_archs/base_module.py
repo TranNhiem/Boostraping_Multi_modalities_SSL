@@ -89,8 +89,8 @@ class MultiHeadAttention(nn.Module):
     def __init__(
         self,
         num_heads: int,
-        num_q_input_channels: int,
-        num_kv_input_channels: int,
+        num_q_input_channels: int,   # latent array channel
+        num_kv_input_channels: int,  # byte array channel
         num_qk_channels: Optional[int] = None,
         num_v_channels: Optional[int] = None,
         num_output_channels: Optional[int] = None,
@@ -111,13 +111,13 @@ class MultiHeadAttention(nn.Module):
         super().__init__()
 
         if num_qk_channels is None:
-            num_qk_channels = num_q_input_channels
+            num_qk_channels = num_q_input_channels  # latent array channel
 
         if num_v_channels is None:
-            num_v_channels = num_qk_channels
+            num_v_channels = num_qk_channels        
 
         if num_output_channels is None:
-            num_output_channels = num_q_input_channels
+            num_output_channels = num_q_input_channels  # latent array channel
 
         if num_qk_channels % num_heads != 0:
             raise ValueError("num_qk_channels must be divisible by num_heads")
@@ -130,9 +130,9 @@ class MultiHeadAttention(nn.Module):
         self.dp_scale = num_qk_channels_per_head ** -0.5
         self.num_heads = num_heads
 
-        self.q_proj = nn.Linear(num_q_input_channels, num_qk_channels)
-        self.k_proj = nn.Linear(num_kv_input_channels, num_qk_channels)
-        self.v_proj = nn.Linear(num_kv_input_channels, num_v_channels)
+        self.q_proj = nn.Linear(num_q_input_channels, num_qk_channels)     # for projecting latent array into latent array
+        self.k_proj = nn.Linear(num_kv_input_channels, num_qk_channels)    # for projecting byte array into latent array
+        self.v_proj = nn.Linear(num_kv_input_channels, num_v_channels)     # for projecting byte array into latent array
         self.o_proj = nn.Linear(num_v_channels, num_output_channels)
         self.dropout = nn.Dropout(dropout)
 
@@ -153,10 +153,10 @@ class MultiHeadAttention(nn.Module):
         q = self.q_proj(x_q)   # 512 x 1024
         k = self.k_proj(x_kv)  # b x 1024,    q*k = b x 512 (latent arr)
         v = self.v_proj(x_kv)  # b x 1024 
-
+        
         q, k, v = (rearrange(x, "b n (h c) -> (b h) n c", h=self.num_heads) for x in [q, k, v])
         attn = torch.einsum("b i c, b j c -> b i j", q, k) * self.dp_scale
-
+        
         if pad_mask is not None:
             pad_mask = repeat(pad_mask, "b j -> (b h) () j", h=self.num_heads)
             attn_max_neg = -torch.finfo(attn.dtype).max
@@ -185,8 +185,8 @@ class SelfAttention(nn.Module):
         self.norm = nn.LayerNorm(num_channels)
         self.attention = MultiHeadAttention(
             num_heads=num_heads,
-            num_q_input_channels=num_channels,
-            num_kv_input_channels=num_channels,
+            num_q_input_channels=num_channels,   
+            num_kv_input_channels=num_channels,  
             num_qk_channels=num_qk_channels,
             num_v_channels=num_v_channels,
             dropout=dropout,
@@ -225,8 +225,8 @@ class CrossAttention(nn.Module):
     def __init__(
         self,
         num_heads: int,
-        num_q_input_channels: int,
-        num_kv_input_channels: int,
+        num_q_input_channels: int,    # latent array channel
+        num_kv_input_channels: int,   # byte array channel
         num_qk_channels: Optional[int] = None,
         num_v_channels: Optional[int] = None,
         dropout: float = 0.0,
@@ -237,10 +237,10 @@ class CrossAttention(nn.Module):
         self.kv_norm = nn.LayerNorm(num_kv_input_channels)
         self.attention = MultiHeadAttention(
             num_heads=num_heads,
-            num_q_input_channels=num_q_input_channels,
-            num_kv_input_channels=num_kv_input_channels,
-            num_qk_channels=num_qk_channels,
-            num_v_channels=num_v_channels,
+            num_q_input_channels=num_q_input_channels,      # latent array channel
+            num_kv_input_channels=num_kv_input_channels,    # byte array channel
+            num_qk_channels=num_qk_channels,      # None..
+            num_v_channels=num_v_channels,        # None..
             dropout=dropout,
         )
 

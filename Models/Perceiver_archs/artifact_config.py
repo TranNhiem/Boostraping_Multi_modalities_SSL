@@ -4,7 +4,7 @@ from Models.Perceiver_archs.io_adapter import InputAdapter, OutputAdapter
 
 @dataclass
 class EncoderConfig:
-    num_cross_attention_heads: int = 8
+    num_cross_attention_heads: int = 1
     num_cross_attention_qk_channels: Optional[int] = None   # num_latent_channels in PerceiverConfig (default)
     num_cross_attention_v_channels: Optional[int] = None    # num_latent_channels (default)
     num_cross_attention_layers: int = 1
@@ -13,8 +13,8 @@ class EncoderConfig:
     num_self_attention_heads: int = 8
     num_self_attention_qk_channels: Optional[int] = None   # num_latent_channels (default)
     num_self_attention_v_channels: Optional[int] = None    # num_latent_channels (default)
-    num_self_attention_layers_per_block: int = 8
-    num_self_attention_blocks: int = 1
+    num_self_attention_layers_per_block: int = 6
+    num_self_attention_blocks: int = 8
     first_self_attention_block_shared: bool = True
     self_attention_widening_factor: int = 1
     dropout: float = 0.0
@@ -27,7 +27,6 @@ class DecoderConfig:
     num_cross_attention_qk_channels: Optional[int] = None
     num_cross_attention_v_channels: Optional[int] = None
     cross_attention_widening_factor: int = 1
-    cross_attention_residual: bool = True
     dropout: float = 0.0
     init_scale: float = 0.02
 

@@ -1,7 +1,9 @@
+from typing import Optional, Tuple
+import math
 import torch
 from torch import Tensor
 import torch.nn as nn
-from einops import repeat  
+from einops import repeat, rearrange
 
 __all__ = ["Image_LearnableEnc", "Image_FourierEnc", "ClassificationOutputAdapter"]
 
@@ -61,15 +63,18 @@ class Image_LearnableEnc(InputAdapter):
         *self.spatial_shape, num_image_channels = image_shape
         super().__init__(num_input_channels=num_image_channels)
 
-        self.pos_encoding = nn.Parameters(torch.empty(image_shape))
+        self.pos_encoding = nn.Parameter(torch.empty(image_shape))
         init_pos_enc(num_image_channels)
 
     def forward(self, x):
         b, *d = x.shape
         if tuple(d) != self.image_shape:
             raise ValueError(f"Input image shape {tuple(d)} different from required shape {self.image_shape}")
-
-        x_enc = rearrange(self.pos_encoding, "b i j c -> b (i j) c")
+        
+        x_enc = repeat(self.pos_encoding, "... -> b ...", b=b)
+        x_enc = rearrange(x_enc, "b i j c -> b (i j) c")
+        x = rearrange(x, "b i j c -> b (i j) c")
+        
         return x + x_enc
 
 
