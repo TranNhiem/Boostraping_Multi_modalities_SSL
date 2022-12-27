@@ -78,8 +78,7 @@ class coco_karpathy_caption_eval(Dataset):
         img_id = ann['image'].split('/')[-1].strip('.jpg').split('_')[-1]
         
         return image, int(img_id)   
-    
-    
+      
 class coco_karpathy_retrieval_eval(Dataset):
     def __init__(self, transform, image_root, ann_root, split, max_words=30):  
         '''
@@ -122,3 +121,7 @@ class coco_karpathy_retrieval_eval(Dataset):
         image = self.transform(image)  
 
         return image, index
+
+
+## Create unit test for the dataset
+__main__ = 
