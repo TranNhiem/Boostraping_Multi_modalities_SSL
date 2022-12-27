@@ -2,11 +2,10 @@
 TranNhiem -2022 
 
 #*------Features: -------------*#
-
-
 ## 1... Images Generated
 1. Generate Image from Original COCO Captions (Text-to-Image)
-2. Generate Image from Original COCO Images (Image-to-Image Variant) (Image-to-Image, CLIP_SD_Variant)
+2. Generate Image from Original COCO Images (Image-to-Image Variant) 
+2. Generate Image from Original COCO Images (Image-to-Image Variant) (CLIP_Guided_Variant)
 
 *****************Depth molecule image Generated:********************
 3. Generate Image Depth from Original COCO Images (Image-to-Depth) [MiDaS Model]
@@ -15,12 +14,9 @@ TranNhiem -2022
 4. Generate Caption from Synthetic COCO Images (Image-to-Text) [BLIP Pretrained Model]
 
 #*------Installation Requirement: -------------*#
-
 install mini-dalle model 
 https://github.com/kuprel/min-dalle 
 install diffusers Model from Huggingface 
-
-
 
 '''
 
@@ -36,6 +32,7 @@ from stable_diffusion_model import StableDiffusionPipeline
 from PIL import Image
 import sys
 from pathlib import Path
+from min_dalle import MinDalle
 
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
@@ -205,6 +202,7 @@ for i in range(300000, 400000):
 generate_data.save_json("/data1/coco_synthetic/coco_synthetic_300k_400k.json") 
 print("------------------------ Done ------------------------")
 
+## Generated Image given by the text description --> 1 Dalle image --> 2. continue pass Stable Diffusion
 class COCO_synthetic_Dalle_SD(Dataset): 
 
     def __init__(self, image_root, ann_root, max_words=200, prompt='A photo of highly detailed of ', 
@@ -334,3 +332,14 @@ class COCO_synthetic_Dalle_SD(Dataset):
 #     generate_data.__getitem__(i)
 # print("------------------------ Done ------------------------")
 # generate_data.save_json("/data1/coco_synthetic_Dalle_SD/coco_synthetic_150k_200k.json")
+
+
+class image_image_variant(Dataset): 
+    pass
+
+class image_depth_variant(Dataset): 
+    pass
+
+class caption_generated(dataset): 
+    pass 
+
