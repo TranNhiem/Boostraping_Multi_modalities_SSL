@@ -3,9 +3,7 @@ import json
 
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
-
 from PIL import Image
-
 from data.utils import pre_caption
 
 class coco_karpathy_train(Dataset):
