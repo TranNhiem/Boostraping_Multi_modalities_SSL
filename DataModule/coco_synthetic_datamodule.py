@@ -9,6 +9,7 @@ from torchvision.datasets.utils import download_url
 from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler, StableDiffusionImageVariationPipeline, StableDiffusionDepth2ImgPipeline
 from torchvision import transforms
 from PIL import Image
+import PIL
 import sys
 from pathlib import Path
 #CUDA_VISIBLE_DEVICES="1"
@@ -507,6 +508,7 @@ class Synthetic_Img_invariance(torch.utils.data.Dataset):
     with open(os.path.join(data_dir,  "coco_karpathy_train.json"), 'r') as f:
       self.captions = json.load(f)
 
+
     self.output_dir = output_dir
     self.num_steps=num_steps
     self.num_img_invariant=num_img_invariant
@@ -653,10 +655,11 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
         ## Reading initial image 
         path = os.path.join(self.data_dir,image_id)
         init_img = Image.open(path)
-        
+
+        init_img= init_img.resize((512, 512), resample=Image.BICUBIC)
         ## Generate new image with input prompt
         generator=torch.Generator(device="cuda").manual_seed(random.randint(0,100000))
-        image = self.generative_model(prompt=caption, image=init_img,  num_inference_steps=self.num_steps,  guidance_scale=self.guidance_scale,strength=0.7, generator=generator).images[0]
+        image = self.generative_model(prompt=caption, image=init_img,  num_inference_steps=self.num_steps,  guidance_scale=self.guidance_scale, strength=0.7, generator=generator).images[0]
         
         ## Save image
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
@@ -681,14 +684,12 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
 
 
 
-
-
-
-generate_data=synthetic_Image_Depth_image(data_dir="/data1/original_coco/", output_dir="/data1/coco_SD_depth_synthetic/",)
-for i in range(5):
+generate_data=synthetic_Image_Depth_image(data_dir="/data1/original_coco_caption/", output_dir="/data1/coco_synthetic/coco_synthetic_img_depth_img/",)
+for i in range(150000, 300000):
     generate_data.__getitem__(i)
 print("======================== Done ========================")
-generate_data.save_json("coco_synthetic_150k_200k.json")
+generate_data.save_json("coco_synthetic_150k_300k.json")
+
 
 class COCO_Synthetic_image_3_image(Dataset): 
     pass 
