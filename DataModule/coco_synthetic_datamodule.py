@@ -612,7 +612,7 @@ class Synthetic_Img_invariance(torch.utils.data.Dataset):
 ## ----------------------- IMAGE 2 IMAGE ------------------------
 class synthetic_Image_Depth_image(torch.utils.data.Dataset): 
     
-    def __init__(self, data_dir, output_dir, transform=None, num_steps=45, guidance_scale=7.5, ):
+    def __init__(self, data_dir, output_dir, transform=None, num_steps=50, guidance_scale=7.5, ):
         self.data_dir = data_dir
 
         Path(output_dir + "/val2014/").mkdir(parents=True, exist_ok=True)
@@ -623,7 +623,6 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
 
         self.output_dir = output_dir
         self.num_steps=num_steps
-        
         self.guidance_scale=guidance_scale
         self.new_json=[] 
 
