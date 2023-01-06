@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.datasets.utils import download_url
 #from stable_diffusion_model import StableDiffusionPipeline
-from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler, StableDiffusionImageVariationPipeline
+from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler, StableDiffusionImageVariationPipeline, StableDiffusionDepth2ImgPipeline
 from torchvision import transforms
 from PIL import Image
 import sys
@@ -45,9 +45,11 @@ def pre_caption(caption, max_words=50):
 
 def dummy(images, **kwargs): return images, False
 
+
+## ----------------------- Section for TEXT to IMAGE ------------------------
+
 ## Generated data given by the text description
-## Old Design 
-class Old_version_COCO_synthetic_Dataset(Dataset):
+class Old_version(Dataset):
 
     def __init__(self, image_root, ann_root, max_words=200, prompt='4k , highly detailed', generate_mode="repeat", 
                          guidance_scale=7.5,  num_inference_steps=70, seed=123245):
@@ -199,7 +201,7 @@ class Old_version_COCO_synthetic_Dataset(Dataset):
         with open(path, 'w') as outfile:
             json.dump(self.new_json, outfile)
 
-class COCO_synthetic_Dataset(Dataset):
+class synthetic_text_2_image(Dataset):
 
     def __init__(self, image_root, ann_root, max_words=200, prompt='4k , highly detailed', generate_mode="repeat", 
                          guidance_scale=7.5,  num_inference_steps=35, seed=123245):
@@ -367,7 +369,7 @@ class COCO_synthetic_Dataset(Dataset):
 
 # print("------------------------ Done ------------------------")
 
-class COCO_synthetic_Dalle_SD(Dataset): 
+class synthetic_text_2_image_Dalle_SD(Dataset): 
 
     def __init__(self, image_root, ann_root, max_words=200, prompt='A photo of highly detailed of ', 
                     dalle_topk=128, temperature=2., supercondition_factor=16.,
@@ -497,9 +499,9 @@ class COCO_synthetic_Dalle_SD(Dataset):
 # print("------------------------ Done ------------------------")
 # generate_data.save_json("/data1/coco_synthetic_Dalle_SD/coco_synthetic_150k_200k.json")
 
-
-        
-class COCO_Synthetic_Img_invariance(torch.utils.data.Dataset):
+## ----------------------- IMAGE VARIANTS ------------------------
+     
+class Synthetic_Img_invariance(torch.utils.data.Dataset):
   def __init__(self, data_dir, output_dir, transform=None, num_steps=35, guidance_scale=3,num_img_invariant=5, ):
     self.data_dir = data_dir
     with open(os.path.join(data_dir,  "coco_karpathy_train.json"), 'r') as f:
@@ -596,13 +598,84 @@ class COCO_Synthetic_Img_invariance(torch.utils.data.Dataset):
             json.dump(self.new_json, outfile)
 
 
-data_dir="/data1/original_coco/"
-generate_data=COCO_Synthetic_Img_invariance(data_dir=data_dir, output_dir="/data1/coco_SD_invariant_synthetic",)
-with open(os.path.join(data_dir,  "coco_karpathy_train.json"), 'r') as f:
-    captions = json.load(f)
+# data_dir="/data1/original_coco/"
+# generate_data=COCO_Synthetic_Img_invariance(data_dir=data_dir, output_dir="/data1/coco_SD_invariant_synthetic",)
+# with open(os.path.join(data_dir,  "coco_karpathy_train.json"), 'r') as f:
+#     captions = json.load(f)
 
+# for i in range(150000):
+#     generate_data.__getitem__(i)
+# print("======================== Done ========================")
+# generate_data.save_json("/data1/coco_synthetic_Dalle_SD/coco_synthetic_150k_200k.json")
+
+
+## ----------------------- IMAGE 2 IMAGE ------------------------
+class synthetic_Image_Depth_image(torch.utils.data.Dataset): 
+    
+    def __init__(self, data_dir, output_dir, transform=None, num_steps=35, guidance_scale=7.5, ):
+        self.data_dir = data_dir
+
+        Path(data_dir + "val2014/").mkdir(parents=True, exist_ok=True)
+        Path(data_dir + "train2014/").mkdir(parents=True, exist_ok=True)
+
+        with open(os.path.join(data_dir,  "coco_karpathy_train.json"), 'r') as f:
+            self.annotations = json.load(f)
+
+        self.output_dir = output_dir
+        self.num_steps=num_steps
+        
+        self.guidance_scale=guidance_scale
+
+
+        ## Stable Diffusion Model with Image Variant Model 
+        store_path="/data1/pretrained_weight/StableDiffusion/"
+        sd_pipe = StableDiffusionImageVariationPipeline.from_pretrained(
+                    "stabilityai/stable-diffusion-2-depth",
+                torch_dtype=torch.float16,
+                use_auth_token=True,
+                cache_dir= store_path, 
+                
+            )
+        sd_pipe.safety_checker = dummy
+        sd_pipe.scheduler = DPMSolverMultistepScheduler.from_config(sd_pipe.scheduler.config)
+        self.generative_model=sd_pipe.to("cuda")
+    
+    def __len__(self):
+        return len(self.annotations)
+
+
+
+    def __getitem__(self, index):
+        annotations = self.annotations[index]
+        ## Get image information
+        image_id = annotations['image']
+        caption = annotations['caption']
+        
+        ## Reading initial image 
+        path = os.path.join(self.data_dir,image_id)
+        init_img = Image.open(path)
+        
+        ## Generate new image with input prompt
+        image = self.generative_model(prompt=caption, image=init_img, negative_prompt=None, num_inference_steps=self.num_steps,  guidance_scale=self.guidance_scale,strength=0.7).images[0]
+        
+        ## Save image
+        Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        i = 0
+        while True:
+            output_path = os.path.join(self.output_dir, image_id[:-4] + f"_{i}_SD_depth.jpg")
+            if not os.path.exists(output_path):  # Check if file with same name already exists
+                break
+            i += 1  # Increment counter and try next name
+        image.save(output_path)
+
+generate_data=synthetic_Image_Depth_image(data_dir="/data1/original_coco/", output_dir="/data1/coco_SD_depth_synthetic",)
 for i in range(150000):
     generate_data.__getitem__(i)
 print("======================== Done ========================")
-# generate_data.save_json("/data1/coco_synthetic_Dalle_SD/coco_synthetic_150k_200k.json")
+generate_data.save_json("/data1/coco_synthetic_Dalle_SD/coco_synthetic_150k_200k.json")
+
+
+class COCO_Synthetic_image_3_image(Dataset): 
+    pass 
+
 
