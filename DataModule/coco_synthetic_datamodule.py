@@ -612,11 +612,11 @@ class Synthetic_Img_invariance(torch.utils.data.Dataset):
 ## ----------------------- IMAGE 2 IMAGE ------------------------
 class synthetic_Image_Depth_image(torch.utils.data.Dataset): 
     
-    def __init__(self, data_dir, output_dir, transform=None, num_steps=35, guidance_scale=7.5, ):
+    def __init__(self, data_dir, output_dir, transform=None, num_steps=45, guidance_scale=7.5, ):
         self.data_dir = data_dir
 
-        Path(data_dir + "val2014/").mkdir(parents=True, exist_ok=True)
-        Path(data_dir + "train2014/").mkdir(parents=True, exist_ok=True)
+        Path(output_dir + "/val2014/").mkdir(parents=True, exist_ok=True)
+        Path(output_dir + "/train2014/").mkdir(parents=True, exist_ok=True)
 
         with open(os.path.join(data_dir,  "coco_karpathy_train.json"), 'r') as f:
             self.annotations = json.load(f)
@@ -625,11 +625,12 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
         self.num_steps=num_steps
         
         self.guidance_scale=guidance_scale
+        self.new_json=[] 
 
 
         ## Stable Diffusion Model with Image Variant Model 
         store_path="/data1/pretrained_weight/StableDiffusion/"
-        sd_pipe = StableDiffusionImageVariationPipeline.from_pretrained(
+        sd_pipe = StableDiffusionDepth2ImgPipeline.from_pretrained(
                     "stabilityai/stable-diffusion-2-depth",
                 torch_dtype=torch.float16,
                 use_auth_token=True,
@@ -644,7 +645,6 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
         return len(self.annotations)
 
 
-
     def __getitem__(self, index):
         annotations = self.annotations[index]
         ## Get image information
@@ -656,7 +656,8 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
         init_img = Image.open(path)
         
         ## Generate new image with input prompt
-        image = self.generative_model(prompt=caption, image=init_img, negative_prompt=None, num_inference_steps=self.num_steps,  guidance_scale=self.guidance_scale,strength=0.7).images[0]
+        generator=torch.Generator(device="cuda").manual_seed(random.randint(0,100000))
+        image = self.generative_model(prompt=caption, image=init_img,  num_inference_steps=self.num_steps,  guidance_scale=self.guidance_scale,strength=0.7, generator=generator).images[0]
         
         ## Save image
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
@@ -668,12 +669,27 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
             i += 1  # Increment counter and try next name
         image.save(output_path)
 
-generate_data=synthetic_Image_Depth_image(data_dir="/data1/original_coco/", output_dir="/data1/coco_SD_depth_synthetic",)
-for i in range(150000):
+        ## Save new image_id and caption
+        new_image_id = image_id[:-4] + f"_{i}_SD_depth.jpg"
+        ID= annotations['image_id']
+        new_id = ID + f"_{i}_SD_depth"
+        new_annotation = {'caption': caption , 'image': new_image_id,'image_id':new_id  }
+        self.new_json.append(new_annotation)
+    
+    def save_json(self, file_name):
+        with open(os.path.join(self.output_dir,file_name), 'w') as f:
+            json.dump(self.new_json, f)
+
+
+
+
+
+
+generate_data=synthetic_Image_Depth_image(data_dir="/data1/original_coco/", output_dir="/data1/coco_SD_depth_synthetic/",)
+for i in range(5):
     generate_data.__getitem__(i)
 print("======================== Done ========================")
-generate_data.save_json("/data1/coco_synthetic_Dalle_SD/coco_synthetic_150k_200k.json")
-
+generate_data.save_json("coco_synthetic_150k_200k.json")
 
 class COCO_Synthetic_image_3_image(Dataset): 
     pass 
