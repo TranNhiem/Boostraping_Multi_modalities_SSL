@@ -656,28 +656,42 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
         path = os.path.join(self.data_dir,image_id)
         init_img = Image.open(path)
 
-        init_img= init_img.resize((512, 512), resample=Image.BICUBIC)
+        # Check if the image is grayscale
+        if init_img.mode == "L":
+            # Convert the grayscale image to an RGB image
+            init_img = init_img.convert("RGB")
+
+        init_img= init_img.resize((512, 512),resample=Image.BILINEAR)
+        
         ## Generate new image with input prompt
         generator=torch.Generator(device="cuda").manual_seed(random.randint(0,100000))
-        image = self.generative_model(prompt=caption, image=init_img,  num_inference_steps=self.num_steps,  guidance_scale=self.guidance_scale, strength=0.7, generator=generator).images[0]
-        
+
         ## Save image
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        
+        # check_path=os.path.join(self.output_dir, image_id[:-4] + f"_0_SD_depth.jpg")
+        # if os.path.exists(check_path):
+        #     print("The image file exists.")
+        # else:
+        #     print("The image file does not exist.")
         i = 0
         while True:
             output_path = os.path.join(self.output_dir, image_id[:-4] + f"_{i}_SD_depth.jpg")
             if not os.path.exists(output_path):  # Check if file with same name already exists
                 break
             i += 1  # Increment counter and try next name
+        
+        image = self.generative_model(prompt=caption, image=init_img,  num_inference_steps=self.num_steps,  guidance_scale=self.guidance_scale, strength=0.7, generator=generator).images[0]
         image.save(output_path)
 
         ## Save new image_id and caption
         new_image_id = image_id[:-4] + f"_{i}_SD_depth.jpg"
         ID= annotations['image_id']
         new_id = ID + f"_{i}_SD_depth"
+        
         new_annotation = {'caption': caption , 'image': new_image_id,'image_id':new_id  }
         self.new_json.append(new_annotation)
-    
+
     def save_json(self, file_name):
         with open(os.path.join(self.output_dir,file_name), 'w') as f:
             json.dump(self.new_json, f)
@@ -685,10 +699,13 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
 
 
 generate_data=synthetic_Image_Depth_image(data_dir="/data1/original_coco_caption/", output_dir="/data1/coco_synthetic/coco_synthetic_img_depth_img/",)
-for i in range(150000, 300000):
+for i in range(4500000, ):
+    # print(i)
+
     generate_data.__getitem__(i)
 print("======================== Done ========================")
-generate_data.save_json("coco_synthetic_150k_300k.json")
+generate_data.save_json("coco_synthetic_450k_566747k.json")
+## 227 sever missing Json file from (150k-300k)
 
 
 class COCO_Synthetic_image_3_image(Dataset): 
