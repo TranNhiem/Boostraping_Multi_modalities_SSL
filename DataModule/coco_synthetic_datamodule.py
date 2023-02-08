@@ -571,14 +571,23 @@ class Synthetic_Img_invariance(torch.utils.data.Dataset):
    
     ## Load Image
     # image = io.imread(path)
-    img = Image.open(path)
+    
+    init_img = Image.open(path)
+
+    # Check if the image is grayscale
+    if init_img.mode == "L":
+        # Convert the grayscale image to an RGB image
+        init_img = init_img.convert("RGB")
+
+    init_img= init_img.resize((512, 512),resample=Image.BILINEAR)
+    
     ## Transform Image
     # img = self.transform(img).to(device)#.unsqueeze(0)
 
 
     ## 2... Generate 5 Invariant Images from 1 Image   
     num_samples = self.num_img_invariant
-    image = self.generative_model(num_samples*[img],num_inference_steps=self.num_steps, guidance_scale=self.guidance_scale).images
+    image = self.generative_model(num_samples*[init_img],num_inference_steps=self.num_steps, guidance_scale=self.guidance_scale).images
     Path(self.output_dir).mkdir(parents=True, exist_ok=True)
 
     
@@ -600,15 +609,15 @@ class Synthetic_Img_invariance(torch.utils.data.Dataset):
             json.dump(self.new_json, outfile)
 
 
-# data_dir="/data1/original_coco/"
-# generate_data=COCO_Synthetic_Img_invariance(data_dir=data_dir, output_dir="/data1/coco_SD_invariant_synthetic",)
-# with open(os.path.join(data_dir,  "coco_karpathy_train.json"), 'r') as f:
-#     captions = json.load(f)
+data_dir="/data1/original_coco/"
+generate_data=Synthetic_Img_invariance(data_dir=data_dir, output_dir="/data1/coco_SD_invariant_synthetic",)
+with open(os.path.join(data_dir,  "coco_karpathy_train.json"), 'r') as f:
+    captions = json.load(f)
 
-# for i in range(150000):
-#     generate_data.__getitem__(i)
-# print("======================== Done ========================")
-# generate_data.save_json("/data1/coco_synthetic_Dalle_SD/coco_synthetic_150k_200k.json")
+for i in range(450000,566747 ):
+    generate_data.__getitem__(i)
+print("======================== Done ========================")
+# generate_data.save_json("/data1/coco_synthetic_Dalle_SD/coco_synthetic_150k.json")
 
 
 ## ----------------------- IMAGE 2 IMAGE ------------------------
@@ -698,13 +707,13 @@ class synthetic_Image_Depth_image(torch.utils.data.Dataset):
 
 
 
-generate_data=synthetic_Image_Depth_image(data_dir="/data1/original_coco_caption/", output_dir="/data1/coco_synthetic/coco_synthetic_img_depth_img/",)
-for i in range(4500000, ):
-    # print(i)
+# generate_data=synthetic_Image_Depth_image(data_dir="/data1/original_coco_caption/", output_dir="/data1/coco_synthetic/coco_synthetic_img_depth_img/",)
+# for i in range(4500000, ):
+#     # print(i)
 
-    generate_data.__getitem__(i)
-print("======================== Done ========================")
-generate_data.save_json("coco_synthetic_450k_566747k.json")
+#     generate_data.__getitem__(i)
+# print("======================== Done ========================")
+# generate_data.save_json("coco_synthetic_450k_566747k.json")
 ## 227 sever missing Json file from (150k-300k)
 
 
