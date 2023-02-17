@@ -36,7 +36,7 @@ def get_coco_annotation(coco_annotation_path, save_dir="/data1/"):
             
             ## Consider to save image path and Image Name 
             image_id = single_dict['image_id']
-            image= single_dict['image']
+            image_= single_dict['image']
             if image_id in processsed_image_ids:    
                 continue
             else:
@@ -44,7 +44,8 @@ def get_coco_annotation(coco_annotation_path, save_dir="/data1/"):
                 for i in range(5): # 5 is the number of variant
                     image_id = image_id+str(i)
                     ## To save new annotation
-                    image=image[:-4]+ str(i) + ".jpg"
+                    image=image_[:-4]+ "invar_"+ str(i) + ".jpg"
+
                     new_json={"image_id": image_id, "image": image}
                     
                     coco_SD_invariant_synthetic.append(new_json)

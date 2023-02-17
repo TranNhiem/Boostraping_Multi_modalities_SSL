@@ -838,7 +838,7 @@ class COCO_Synthetic_BLIP_Image_Caption(Dataset):
         ## Get the original coco annotation to get image ID, image path
         self.coco_dataset = json.load(
             open(os.path.join(data_dir, json_file_name), 'r'))
-
+        
         # with open(os.path.join(data_dir, json_file_name ), 'r') as f:
         #     self.coco_dataset = json.load(f)
 
@@ -890,15 +890,17 @@ class COCO_Synthetic_BLIP_Image_Caption(Dataset):
 
     ## Iterate through all the images
     def __len__(self):
+
         return len(self.coco_dataset)
         
 
     def __getitem__(self, idx):
+        #print(len(self.coco_dataset))
         image_info = self.coco_dataset[idx]
         image_id = image_info['image_id']
         image_name= image_info['image']
         image_path = os.path.join(self.data_dir, image_info['image'])
-
+        #breakpoint()
 
         if image_id in self.processsed_image_ids: 
             return None
@@ -965,13 +967,13 @@ class COCO_Synthetic_BLIP_Image_Caption(Dataset):
         with open(path_, 'w') as f:
             json.dump(not_foud_image_ids, f)
 
-generate_data=COCO_Synthetic_BLIP_Image_Caption(data_dir="/data1/coco_synthetic", json_file_name="coco_karpathy_train.json", 
-                                                output_dir="/data1/DataEngine/blip_coco_caption_synth/",output_json_file="BLIP1_image_to_text_COCO_Caption_Dataset.json", blip_2=False)
+generate_data=COCO_Synthetic_BLIP_Image_Caption(data_dir="/data1/coco_SD_invariant_synthetic/", json_file_name="coco_SD_invariant_synthetic.json", 
+                                                output_dir="/data1/DataEngine/blip_clip_sd_images_caption_synth/",output_json_file="BLIP2_Clip_SD_image_to_text.json", blip_2=True)
 
 ## For Loop To Generate Synthetic Caption
 ## Total Unique Image ID = 113287
 ## Totoal Image ID = 566747
-for i in tqdm(range(566747)):
+for i in tqdm(range(566435)):
     generate_data.__getitem__(i)
 generate_data.save_to_json()
 print("======================== Done ========================")
