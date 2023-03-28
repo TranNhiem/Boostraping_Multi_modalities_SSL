@@ -145,8 +145,8 @@ if not os.path.exists(weight_path):
 # for i, (image, label) in enumerate(dataset):
 #     # do something with the image and label, for example print their shapes
 #     print(f"Image shape: {image.size}, Label shape: {label.size}")
-#     # label.save('test_segment.png')
-#     # image.save('test_image.png')
+#     # label.save('./temp_imgs/test_segment.png')
+#     # image.save('./temp_imgs/test_image.png')
    
 # # url = "http://images.cocodataset.org/val2017/000000039769.jpg"
 # # image = Image.open(requests.get(url, stream=True).raw)
@@ -171,61 +171,169 @@ from chatcaptioner.chat import set_openai_key, caption_images, get_instructions
 from chatcaptioner.blip2 import Blip2
 from chatcaptioner.utils import RandomSampledDataset, plot_img, print_info
 
-openai_key = os.environ["OPENAI_API_KEY"]
-set_openai_key(openai_key)
+# openai_key = os.environ["OPENAI_API_KEY"]
+# set_openai_key(openai_key)
 
-blip2s = {
-    #'FlanT5 XXL': Blip2('FlanT5 XXL', device_id=0, bit8=True), # load BLIP-2 FlanT5 XXL to GPU0. Too large, need 8 bit. About 20GB GPU Memory
-     'OPT2.7B COCO': Blip2('OPT2.7B COCO', device_id=1, bit8=False), # load BLIP-2 OPT2.7B COCO to GPU1. About 10GB GPU Memory
-    # 'OPT6.7B COCO': Blip2('OPT6.7B COCO', device_id=2, bit8=True), # load BLIP-2 OPT6.7B COCO to GPU2. Too large, need 8 bit.
-}
-blip2s_q = {}
+# blip2s = {
+#     #'FlanT5 XXL': Blip2('FlanT5 XXL', device_id=0, bit8=True), # load BLIP-2 FlanT5 XXL to GPU0. Too large, need 8 bit. About 20GB GPU Memory
+#      'OPT2.7B COCO': Blip2('OPT2.7B COCO', device_id=1, bit8=False), # load BLIP-2 OPT2.7B COCO to GPU1. About 10GB GPU Memory
+#     # 'OPT6.7B COCO': Blip2('OPT6.7B COCO', device_id=2, bit8=True), # load BLIP-2 OPT6.7B COCO to GPU2. Too large, need 8 bit.
+# }
+# blip2s_q = {}
 
-## ------------ Setting the Parameters -----------------
+# ## ------------ Setting the Parameters -----------------
 
-# set the dataset to test
-dataset_name = 'cityscape_train'  # current options: 'artemis', 'cc_val', 'coco_val'
-# set the number of chat rounds between GPT3 and BLIP-2
-n_rounds = 8
-# set the number of visible chat rounds to BLIP-2. <0 means all the chat histories are visible.
-n_blip2_context = 1
-# if print the chat out in the testing
-print_chat = True
-# set the question model
-question_model_tag = 'gpt-3.5-turbo'
+# # set the dataset to test
+# dataset_name = 'cityscape_train'  # current options: 'artemis', 'cc_val', 'coco_val'
+# # set the number of chat rounds between GPT3 and BLIP-2
+# n_rounds = 8
+# # set the number of visible chat rounds to BLIP-2. <0 means all the chat histories are visible.
+# n_blip2_context = 1
+# # if print the chat out in the testing
+# print_chat = True
+# # set the question model
+# question_model_tag = 'gpt-3.5-turbo'
 
-## ------------ Loading the Dataset -----------------
+# ## ------------ Loading the Dataset -----------------
 
-# preparing the folder to save results
-SAVE_PATH = '/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/cityscape_synthetic/{}/{}'.format(question_model_tag, dataset_name)
-if not os.path.exists(SAVE_PATH):
-    os.makedirs(os.path.join(SAVE_PATH, 'caption_result'))
-with open(os.path.join(SAVE_PATH, 'instruction.yaml'), 'w') as f:
-    yaml.dump(get_instructions(), f)
+# # preparing the folder to save results
+# SAVE_PATH = '/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/cityscape_synthetic/{}/{}'.format(question_model_tag, dataset_name)
+# if not os.path.exists(SAVE_PATH):
+#     os.makedirs(os.path.join(SAVE_PATH, 'caption_result'))
+# with open(os.path.join(SAVE_PATH, 'instruction.yaml'), 'w') as f:
+#     yaml.dump(get_instructions(), f)
 
-if question_model_tag in blip2s_q:
-    question_model = blip2s_q[question_model_tag]
-else:
-    question_model = question_model_tag
+# if question_model_tag in blip2s_q:
+#     question_model = blip2s_q[question_model_tag]
+# else:
+#     question_model = question_model_tag
 
-# ------------ Testing Generate Question-----------------
-for i, (image, label) in enumerate(dataset):
-    sample_img_ids=i
-    image.save(f'test_image_{i}.png')
-    caption_images(blip2s, 
-                image, 
-                sample_img_ids, 
-                save_path=SAVE_PATH, 
-                n_rounds=n_rounds, 
-                n_blip2_context=n_blip2_context,
-                model=question_model,
-                print_mode='chat')
+## ------------ Testing Generate Question-----------------
+# for i, (image, label) in enumerate(dataset):
+#     sample_img_ids=i
+#     image.save(f'./temp_imgs/test_image_{i}.png')
+#     caption_images(blip2s, 
+#                 image, 
+#                 sample_img_ids, 
+#                 save_path=SAVE_PATH, 
+#                 n_rounds=n_rounds, 
+#                 n_blip2_context=n_blip2_context,
+#                 model=question_model,
+#                 print_mode='chat')
     
-    if i==4:
-        break 
+#     if i==4:
+#         break 
 
 
 ##********************************************************************************************
 ## Step 4 Generate Conditional Generate Image Condition 
 ##********************************************************************************************
-# Load 
+'''
+0. Testing Code with Image Variant usign SD 
+    + UnCLIP Image Interpolation (UnCLIP Image Interpolation Pipeline)
+    + Image Variant with CLIP  Image Embedding
+0.1 Using Pain by Sample to Generate Image Variant 
+1. Consider CLIP Segmentation --> Semantic Segmentation via Text Description
+2. Grismer multi modalities Condition --> 
+3. Using ControlNet Condition 
+'''
+
+##********************************* Image Generation with SD image Invariant*****************************************
+##-------------------------------------------
+## 1 CLIP Image Embedding --> Image Variant
+##-------------------------------------------
+
+from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler, StableDiffusionImageVariationPipeline, StableDiffusionDepth2ImgPipeline
+
+## Stable Diffusion Model with Image Variant Model 
+weight_path= "/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/pretrained_weight/StableDiffusion/"
+
+store_path="/data1/pretrained_weight/StableDiffusion/"
+sd_pipe = StableDiffusionImageVariationPipeline.from_pretrained(
+            "lambdalabs/sd-image-variations-diffusers",
+            revision="v2.0",
+        torch_dtype=torch.float16,
+        use_auth_token=True,
+        cache_dir= weight_path, 
+        
+    )
+def dummy(images, **kwargs): return images, False
+
+sd_pipe.safety_checker = dummy
+## Using DPPM++ 
+# sd_pipe.scheduler = DPMSolverMultistepScheduler.from_config(sd_pipe.scheduler.config)
+
+# generative_model=sd_pipe.to("cuda")
+
+# num_samples =3
+# num_steps=30
+# guidance_scale=8.5
+
+# for i, (image, label) in enumerate(dataset):
+#     init_img=image
+#     image =generative_model(num_samples*[init_img],num_inference_steps=num_steps, guidance_scale=guidance_scale).images
+#     for idx, im in enumerate(image):
+#         output_path="./temp_imgs/" + str("invar_")+ str(i)+ str(idx) + ".jpg"
+#         #output_path=os.path.join(output_path,str(idx) + ".jpg")
+#         im.save(output_path)
+    
+#     if i==3: 
+#         break 
+
+
+from diffusers import UniPCMultistepScheduler
+
+# sd_pipe.scheduler = UniPCMultistepScheduler.from_config(sd_pipe.scheduler.config)
+# #sd_pipe.enable_model_cpu_offload()
+# sd_pipe.enable_xformers_memory_efficient_attention()
+
+# generative_model=sd_pipe.to("cuda")
+# num_samples =3
+# num_steps=30
+# guidance_scale=8.5
+
+# for i, (image, label) in enumerate(dataset):
+#     init_img=image
+#     image =generative_model(num_samples*[init_img],num_inference_steps=num_steps, guidance_scale=guidance_scale).images
+#     for idx, im in enumerate(image):
+#         output_path="./temp_imgs/" + str("invar_UniPCM")+ str(i)+ str(idx) + ".jpg"
+#         #output_path=os.path.join(output_path,str(idx) + ".jpg")
+#         im.save(output_path)
+    
+#     if i==3: 
+#         break 
+
+##-------------------------------------------
+## 2 UnCLIP Image Interpolation --> Image Variant
+##-------------------------------------------
+
+from diffusers import DiffusionPipeline
+
+device = torch.device("cpu" if not torch.cuda.is_available() else "cuda")
+dtype = torch.float16 if torch.cuda.is_available() else torch.bfloat16
+pipe = DiffusionPipeline.from_pretrained(
+    "kakaobrain/karlo-v1-alpha-image-variations",
+    torch_dtype=dtype,
+    custom_pipeline="unclip_image_interpolation", 
+    cache_dir= weight_path,
+)
+#pipe.enable_sequential_cpu_offload()
+#pipe.enable_xformers_memory_efficient_attention()
+
+pipe=pipe.to(device)
+images=[]
+generator = torch.Generator(device=device).manual_seed(42)
+for i, (image, label) in enumerate(dataset):
+    #images.append(image)
+    if i>= 1: 
+        images.append(image)
+        if i%2 ==0:
+            output = pipe(image = images ,steps=5, generator = generator)
+            for i,image in enumerate(output.images):
+                image.save('./temp_imgs/interpol_street%s.jpg' % i)
+            images=[]
+        
+    if i ==5: 
+        break 
+
+
