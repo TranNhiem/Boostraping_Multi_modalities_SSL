@@ -172,9 +172,11 @@ import torch
 from chatcaptioner.chat import set_openai_key, caption_images, get_instructions
 from chatcaptioner.blip2 import Blip2
 from chatcaptioner.utils import RandomSampledDataset, plot_img, print_info
-
-# openai_key = os.environ["OPENAI_API_KEY"]
-# set_openai_key(openai_key)
+# openai.api_type = "azure"
+# openai.api_base = "https://sslgroupservice.openai.azure.com/"
+# openai.api_version = "2023-03-15-preview"
+openai_key = os.environ["OPENAI_API_KEY"]
+set_openai_key(openai_key)
 
 blip2s = {
     #'FlanT5 XXL': Blip2('FlanT5 XXL', device_id=0, bit8=True), # load BLIP-2 FlanT5 XXL to GPU0. Too large, need 8 bit. About 20GB GPU Memory
@@ -194,10 +196,9 @@ n_blip2_context = 1
 # if print the chat out in the testing
 print_chat = True
 # set the question model
-question_model_tag = 'gpt-3.5-turbo'
+question_model_tag ="gpt-35-turbo"
 
 # ------------ Loading the Dataset -----------------
-
 ## preparing the folder to save results
 SAVE_PATH = '/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/cityscape_synthetic/{}/{}'.format(question_model_tag, dataset_name)
 if not os.path.exists(SAVE_PATH):
