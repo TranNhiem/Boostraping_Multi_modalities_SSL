@@ -176,7 +176,20 @@ from chatcaptioner.utils import RandomSampledDataset, plot_img, print_info
 # openai.api_base = "https://sslgroupservice.openai.azure.com/"
 # openai.api_version = "2023-03-15-preview"
 openai_key = os.environ["OPENAI_API_KEY"]
-set_openai_key(openai_key)
+set_openai_key()
+## Adding These Line of code in Chat.py if using Azure OpenAI
+'''
+    VALID_CHATGPT_MODELS = ['gpt-3.5-turbo', "gpt-35-turbo"]## lINE 54
+    from Line 74-> 77
+    openai.api_type = "azure"
+    openai.api_version = "2023-03-15-preview" 
+    openai.api_base = "https://sslgroupservice.openai.azure.com/"#os.getenv("OPENAI_API_BASE")  # Your Azure OpenAI resource's endpoint value.
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    question_model_tag ="gpt-35-turbo"
+
+''' 
+    
 
 blip2s = {
     #'FlanT5 XXL': Blip2('FlanT5 XXL', device_id=0, bit8=True), # load BLIP-2 FlanT5 XXL to GPU0. Too large, need 8 bit. About 20GB GPU Memory
@@ -196,7 +209,7 @@ n_blip2_context = 1
 # if print the chat out in the testing
 print_chat = True
 # set the question model
-question_model_tag ="gpt-35-turbo"
+question_model_tag ="gpt-35-turbo"## for OPENAI "gpt-3.5-turbo"
 
 # ------------ Loading the Dataset -----------------
 ## preparing the folder to save results
