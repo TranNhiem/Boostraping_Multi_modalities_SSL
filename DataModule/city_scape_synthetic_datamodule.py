@@ -28,6 +28,7 @@ from PIL import Image
 import glob
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 class CityscapesSegmentation(Dataset):
     '''
@@ -74,23 +75,56 @@ class CityscapesSegmentation(Dataset):
     def __len__(self):
         return len(self.images)
 
-    def __getitem__(self, idx):
+    # def __getitem__(self, idx):
+    #     breakpoint()
+    #     if isinstance(idx, int)
+    #         image_path, label_path = self.images[idx]
         
-        image_path, label_path = self.images[idx]
+            
+    #     elif isinstance(idx, slice):
+    #         # Handle slice object
+    #         start = idx.start if idx.start is not None else 0
+    #         stop = idx.stop if idx.stop is not None else len(self.images)
+    #         step = idx.step if idx.step is not None else 1
+    #         image_paths, label_paths = zip(*self.images[start:stop:step])
+    #         return [Image.open(p).convert('RGB') for p in image_paths], [Image.open(p) for p in label_paths]
+    #     else:
+    #         raise TypeError('Invalid argument type')
+        
+    #     image = Image.open(image_path).convert('RGB')
+    #     label = Image.open(label_path)
+    #     if self.transforms is not None:
+    #         image = self.transforms(image)
+    #         ## Resize lable image to match the size of the image
+    #         #label = transforms.Resize(image.shape[1:], Image.NEAREST)(label)
+    #         img_size=image.size
+    #         label = transforms.Resize((img_size[1],img_size[0]), Image.NEAREST)(label)
+    #         #breakpoint()
+    #     return image, label
+
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            start, stop, step = idx.indices(len(self))
+            indices = range(start, stop, step)
+            images = [self.images[i] for i in indices]
+            return [self._load_image(i) for i in images]
+        else:
+            return self._load_image(self.images[idx])
+
+    def _load_image(self, image_paths):
+        image_path, label_path = image_paths
         image = Image.open(image_path).convert('RGB')
         label = Image.open(label_path)
-        
+
         if self.transforms is not None:
             image = self.transforms(image)
-            ## Resize lable image to match the size of the image
-            #label = transforms.Resize(image.shape[1:], Image.NEAREST)(label)
-            img_size=image.size
-            label = transforms.Resize((img_size[1],img_size[0]), Image.NEAREST)(label)
-            #breakpoint()
+            img_size = image.size
+            label = transforms.Resize((img_size[1], img_size[0]), Image.NEAREST)(label)
+
         return image, label
 
 
-data_dir = '/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/cityscape_synthetic/'
+data_dir_ = '/home/twshymy868/city_scape_synthetic/'
 batch_size = 256
 split = 'train'
 re_size = (256, 512)
@@ -102,7 +136,7 @@ transform = transforms.Compose([
     ## convert back to PIL image
     transforms.ToPILImage()
 ])
-dataset = CityscapesSegmentation(root_dir=data_dir, split='train_extra', transforms=transform, version="gtCoarse")
+dataset = CityscapesSegmentation(root_dir=data_dir_, split='train_extra', transforms=transform, version="gtCoarse")
 
 ## Testing iterate through the dataset to get images and labels
 # for i, (image, label) in enumerate(dataset):
@@ -137,7 +171,8 @@ Salesforce/blip2-flan-t5-xl-coco
 import requests
 from transformers import Blip2Processor, Blip2ForConditionalGeneration
 
-weight_path= "/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/pretrained_weight/BLIP2/"
+# weight_path= "/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/pretrained_weight/BLIP2/"
+weight_path="/home/twshymy868/Pretrained_weight/BLIP"
 ## check the weight path if not create the path
 # if not os.path.exists(weight_path):
 #     os.makedirs(weight_path)
@@ -174,7 +209,8 @@ weight_path= "/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/pretrained_weight
 ##********************************************************************************************
 
 import sys
-sys.path.append('/home/rick/DataEngine_Pro/Boostraping_Multi_modalities_SSL/DataModule/ChatCaptioner')
+# sys.path.append('/home/rick/DataEngine_Pro/Boostraping_Multi_modalities_SSL/DataModule/ChatCaptioner')
+sys.path.append('/home/twshymy868/SSL_DataEngine/Boostraping_Multi_modalities_SSL/DataModule/ChatCaptioner')
 import yaml
 import torch
 
@@ -186,7 +222,7 @@ from chatcaptioner.utils import RandomSampledDataset, plot_img, print_info
 # openai.api_version = "2023-03-15-preview"
 openai_key = os.environ["OPENAI_API_KEY"]
 #CUDA_VISIBLE_DEVICES="1"
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+
 ## export OPENAI_API_KEY=0aee54a3f2df4c55aea57bf3cf2e99a6
 set_openai_key(openai_key)
 ## Adding These Line of code in Chat.py if using Azure OpenAI
@@ -205,9 +241,9 @@ set_openai_key(openai_key)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 blip2s = {
-    #'FlanT5 XXL': Blip2('FlanT5 XXL', device_id=0, bit8=True), # load BLIP-2 FlanT5 XXL to GPU0. Too large, need 8 bit. About 20GB GPU Memory
-     'OPT2.7B COCO': Blip2('OPT2.7B COCO', device_id=2, bit8=False), # load BLIP-2 OPT2.7B COCO to GPU1. About 10GB GPU Memory
-    # 'OPT6.7B COCO': Blip2('OPT6.7B COCO', device_id=2, bit8=True), # load BLIP-2 OPT6.7B COCO to GPU2. Too large, need 8 bit.
+   'FlanT5 XXL': Blip2('FlanT5 XXL', device_id=0, bit8=True), # load BLIP-2 FlanT5 XXL to GPU0. Too large, need 8 bit. About 20GB GPU Memory
+    #'OPT2.7B COCO': Blip2('OPT2.7B COCO', device_id=0, bit8=False), # load BLIP-2 OPT2.7B COCO to GPU1. About 10GB GPU Memory
+    #'OPT6.7B COCO': Blip2('OPT6.7B COCO', device_id=2, bit8=True), # load BLIP-2 OPT6.7B COCO to GPU2. Too large, need 8 bit.
 }
 blip2s_q = {}
 
@@ -226,7 +262,8 @@ question_model_tag ="gpt-35-turbo"## for OPENAI "gpt-3.5-turbo"
 
 # ------------ Loading the Dataset -----------------
 ## preparing the folder to save results
-SAVE_PATH = '/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/cityscape_synthetic/{}/{}'.format(question_model_tag, dataset_name)
+
+SAVE_PATH = '/home/twshymy868/city_scape_synthetic/{}/{}'.format(question_model_tag, dataset_name)
 if not os.path.exists(SAVE_PATH):
     os.makedirs(os.path.join(SAVE_PATH, 'caption_result'))
 with open(os.path.join(SAVE_PATH, 'instruction.yaml'), 'w') as f:
@@ -238,25 +275,9 @@ else:
     question_model = question_model_tag
 
 # ------------ Testing Generate Question-----------------
-#for i, (image, label) in enumerate(dataset):
-# for i, (image, label) in enumerate(dataset):
-#     sample_img_ids=i
-#     #image.save(f'./temp_imgs/test_image_{i}.png')
-#     caption_images(blip2s, 
-#                 image, 
-#                 sample_img_ids, 
-#                 save_path=SAVE_PATH, 
-#                 n_rounds=n_rounds, 
-#                 n_blip2_context=n_blip2_context,
-#                 model=question_model,
-#                 print_mode='chat')
-    
-#     if i==5000:
-#         break 
-
-for i, (image, label) in enumerate(dataset[5000:]):
-    sample_img_ids = i + 5000
-    image.save(f'./temp_imgs/test_image_{sample_img_ids}.png')
+for i, (image, label) in enumerate(dataset):
+    sample_img_ids=i
+    #image.save(f'./temp_imgs/test_image_{i}.png')
     caption_images(blip2s, 
                 image, 
                 sample_img_ids, 
@@ -265,9 +286,23 @@ for i, (image, label) in enumerate(dataset[5000:]):
                 n_blip2_context=n_blip2_context,
                 model=question_model,
                 print_mode='chat')
-
-    if i==10000:
+    
+    if i==5000:
         break 
+# for i, (image, label) in enumerate(dataset[5000:], start=5000):
+#     sample_img_ids = i + 5000
+#     image.save(f'./temp_imgs/test_image_{sample_img_ids}.png')
+#     caption_images(blip2s, 
+#                 image, 
+#                 sample_img_ids, 
+#                 save_path=SAVE_PATH, 
+#                 n_rounds=n_rounds, 
+#                 n_blip2_context=n_blip2_context,
+#                 model=question_model,
+#                 print_mode='chat')
+
+#     if i==10000:
+#         break 
 
 ##********************************************************************************************
 ## Step 4 Generate Conditional Generate Image Condition 
@@ -294,7 +329,7 @@ from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler, Stab
 ## Stable Diffusion Model with Image Variant Model Version 1 CLIP Image Embedding
 ####-------------------------------------------
 
-weight_path= "/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/pretrained_weight/StableDiffusion/"
+# weight_path= "/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/pretrained_weight/StableDiffusion/"
 
 
 # sd_pipe = StableDiffusionImageVariationPipeline.from_pretrained(
