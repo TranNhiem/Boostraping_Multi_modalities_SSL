@@ -44,20 +44,28 @@ class CityscapesSegmentation(Dataset):
 
     '''
 
-    def __init__(self, root_dir, split, transforms=None):
+    def __init__(self, root_dir, split, transforms=None, version='gtFine'):
         self.root_dir = root_dir
         self.split = split
         self.transforms = transforms
+
+        if version=='gtFine':
+            self.image_dir = os.path.join(root_dir, 'leftImg8bit', split)
+            self.label_dir = os.path.join(root_dir, 'gtFine', split)
+        else:
         
-        self.image_dir = os.path.join(root_dir, 'leftImg8bit', split)
-        self.label_dir = os.path.join(root_dir, 'gtFine', split)
+            self.image_dir = os.path.join(root_dir, 'leftImg8bit', split)
+            self.label_dir = os.path.join(root_dir, 'gtCoarse', split)
 
         self.images = []
         for city_dir in os.listdir(self.image_dir):
             city_image_dir = os.path.join(self.image_dir, city_dir)
             for image_name in os.listdir(city_image_dir):
                 image_path = os.path.join(city_image_dir, image_name)
-                label_name = '{}_gtFine_color.png'.format(image_name.split('_leftImg8bit')[0])
+                if version=='gtFine':
+                    label_name = '{}_gtFine_color.png'.format(image_name.split('_leftImg8bit')[0])
+                else:
+                    label_name = '{}_gtCoarse_color.png'.format(image_name.split('_leftImg8bit')[0])
                 label_path = os.path.join(self.label_dir, city_dir, label_name)
                 assert os.path.isfile(image_path), f"{image_path} does not exist"
                 assert os.path.isfile(label_path), f"{label_path} does not exist"
@@ -93,7 +101,7 @@ transform = transforms.Compose([
     ## convert back to PIL image
     transforms.ToPILImage()
 ])
-dataset = CityscapesSegmentation(root_dir=data_dir, split='train', transforms=transform)
+dataset = CityscapesSegmentation(root_dir=data_dir, split='train_extra', transforms=transform, version="gtCoarse")
 
 ## Testing iterate through the dataset to get images and labels
 # for i, (image, label) in enumerate(dataset):
@@ -133,7 +141,7 @@ weight_path= "/media/rick/f7a9be3d-25cd-45d6-b503-7cb8bd32dbd5/pretrained_weight
 # if not os.path.exists(weight_path):
 #     os.makedirs(weight_path)
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+#device = "cuda" #if torch.cuda.is_available() else "cpu"
 
 # processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b-coco", cache_dir=weight_path )
 
@@ -176,7 +184,10 @@ from chatcaptioner.utils import RandomSampledDataset, plot_img, print_info
 # openai.api_base = "https://sslgroupservice.openai.azure.com/"
 # openai.api_version = "2023-03-15-preview"
 openai_key = os.environ["OPENAI_API_KEY"]
-set_openai_key()
+#CUDA_VISIBLE_DEVICES="1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+## export OPENAI_API_KEY=0aee54a3f2df4c55aea57bf3cf2e99a6
+set_openai_key(openai_key)
 ## Adding These Line of code in Chat.py if using Azure OpenAI
 '''
     VALID_CHATGPT_MODELS = ['gpt-3.5-turbo', "gpt-35-turbo"]## lINE 54
@@ -190,10 +201,11 @@ set_openai_key()
 
 ''' 
     
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 blip2s = {
     #'FlanT5 XXL': Blip2('FlanT5 XXL', device_id=0, bit8=True), # load BLIP-2 FlanT5 XXL to GPU0. Too large, need 8 bit. About 20GB GPU Memory
-     'OPT2.7B COCO': Blip2('OPT2.7B COCO', device_id=1, bit8=False), # load BLIP-2 OPT2.7B COCO to GPU1. About 10GB GPU Memory
+     'OPT2.7B COCO': Blip2('OPT2.7B COCO', device_id=2, bit8=False), # load BLIP-2 OPT2.7B COCO to GPU1. About 10GB GPU Memory
     # 'OPT6.7B COCO': Blip2('OPT6.7B COCO', device_id=2, bit8=True), # load BLIP-2 OPT6.7B COCO to GPU2. Too large, need 8 bit.
 }
 blip2s_q = {}
@@ -201,9 +213,9 @@ blip2s_q = {}
 ## ------------ Setting the Parameters -----------------
 
 # set the dataset to test
-dataset_name = 'cityscape_train'  # current options: 'artemis', 'cc_val', 'coco_val'
+dataset_name = 'cityscape_train_coarse'  # current options: 'artemis', 'cc_val', 'coco_val'
 # set the number of chat rounds between GPT3 and BLIP-2
-n_rounds = 6
+n_rounds = 8
 # set the number of visible chat rounds to BLIP-2. <0 means all the chat histories are visible.
 n_blip2_context = 1
 # if print the chat out in the testing
@@ -225,9 +237,10 @@ else:
     question_model = question_model_tag
 
 # ------------ Testing Generate Question-----------------
+#for i, (image, label) in enumerate(dataset):
 for i, (image, label) in enumerate(dataset):
     sample_img_ids=i
-    image.save(f'./temp_imgs/test_image_{i}.png')
+    #image.save(f'./temp_imgs/test_image_{i}.png')
     caption_images(blip2s, 
                 image, 
                 sample_img_ids, 
@@ -237,7 +250,7 @@ for i, (image, label) in enumerate(dataset):
                 model=question_model,
                 print_mode='chat')
     
-    if i==4:
+    if i==5000:
         break 
 
 

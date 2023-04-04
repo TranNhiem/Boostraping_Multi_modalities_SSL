@@ -108,7 +108,7 @@ openai.api_version = "2023-03-15-preview"
 #openai.api_key = os.environ["OPENAI_API_KEY"]
 
 response = openai.ChatCompletion.create(
-  engine="gpt-35-turbo",
+  engine="text-davinci-003",
     messages=[{"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Who won the world series in 2020?"},
         {"role": "assistant", "content": "The Los Angeles Dodgers won the World Series in 2020."},
