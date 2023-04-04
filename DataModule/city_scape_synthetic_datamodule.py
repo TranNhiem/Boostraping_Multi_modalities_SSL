@@ -75,6 +75,7 @@ class CityscapesSegmentation(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
+        
         image_path, label_path = self.images[idx]
         image = Image.open(image_path).convert('RGB')
         label = Image.open(label_path)
@@ -238,9 +239,24 @@ else:
 
 # ------------ Testing Generate Question-----------------
 #for i, (image, label) in enumerate(dataset):
-for i, (image, label) in enumerate(dataset):
-    sample_img_ids=i
-    #image.save(f'./temp_imgs/test_image_{i}.png')
+# for i, (image, label) in enumerate(dataset):
+#     sample_img_ids=i
+#     #image.save(f'./temp_imgs/test_image_{i}.png')
+#     caption_images(blip2s, 
+#                 image, 
+#                 sample_img_ids, 
+#                 save_path=SAVE_PATH, 
+#                 n_rounds=n_rounds, 
+#                 n_blip2_context=n_blip2_context,
+#                 model=question_model,
+#                 print_mode='chat')
+    
+#     if i==5000:
+#         break 
+
+for i, (image, label) in enumerate(dataset[5000:]):
+    sample_img_ids = i + 5000
+    image.save(f'./temp_imgs/test_image_{sample_img_ids}.png')
     caption_images(blip2s, 
                 image, 
                 sample_img_ids, 
@@ -249,10 +265,9 @@ for i, (image, label) in enumerate(dataset):
                 n_blip2_context=n_blip2_context,
                 model=question_model,
                 print_mode='chat')
-    
-    if i==5000:
-        break 
 
+    if i==10000:
+        break 
 
 ##********************************************************************************************
 ## Step 4 Generate Conditional Generate Image Condition 
